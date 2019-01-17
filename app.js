@@ -7,3 +7,5 @@ $( document).ready(function() {
         $("#target2").text("Target 2 grabbed.");
     });
 });
+
+function getData(){}
