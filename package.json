@@ -1,0 +1,27 @@
+{
+  "name": "cornholejs",
+  "version": "1.0.0",
+  "description": "an app to track cornhole matches via the google sheets api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ptrompeter/cornhole2.git"
+  },
+  "keywords": [
+    "cornhole",
+    "node"
+  ],
+  "author": "Patrick Trompeter",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ptrompeter/cornhole2/issues"
+  },
+  "homepage": "https://github.com/ptrompeter/cornhole2#readme",
+  "dependencies": {
+    "bootstrap": "^3.4.0",
+    "googleapis": "^27.0.0"
+  }
+}
