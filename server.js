@@ -4,11 +4,20 @@ const express = require('express')
 const app = express()
 const port = process.env.SERVER_PORT
 
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+
 app.get('/', (req, res) => res.send('You found me!'));
 app.get('/firstcall', (req, res) => res.send('You reached /firstcall.'));
-app.get('/getdata', (req, res) => res.send([sheetCaller(sampleDataSend)]));
+app.get('/getData', (req, res) => {
+  res.json(sheetCaller(sampleDataSend));
+  });
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
 
 const fs = require('fs');
@@ -54,10 +63,22 @@ function authorize(credentials, callback, params = null) {
   fs.readFile(TOKEN_PATH, (err, token) => {
     if (err) return getNewToken(oAuth2Client, callback);
     oAuth2Client.setCredentials(JSON.parse(token));
-    params ? callback(oAuth2Client, params) : callback(oAuth2Client);
+    return params ? callback(oAuth2Client, params) : callback(oAuth2Client);
   });
 }
 
+
+function authorizeSync(credentials, callback, params = null) {
+  const {client_secret, client_id, redirect_uris} = credentials.installed;
+  const oAuth2Client = new google.auth.OAuth2(
+      client_id, client_secret, redirect_uris[0]);
+  try {
+    const token = await JSON.stringify(fs.readFileSync(TOKEN_PATH));
+    oAuth2Client.setCredentials(token);
+    return params ? callback(oAuth2Client, params) : callback(oAuth2Client);
+  } catch (err) {
+    getNewToken(oAuth2Client, callback)
+  }
 /**
  * Get and store new token after prompting for user authorization, and then
  * execute the given callback with the authorized OAuth2 client.
@@ -155,7 +176,9 @@ function sampleDataSend(auth) {
     }
     const rows = res.data.values;
     if (rows.length) {
-      return rows;
+      let jsonRows = JSON.stringify(rows);
+      console.log("Data:", jsonRows);
+      return jsonRows;
     } else {
       console.log('No data found.');
       return "No data found.";
@@ -204,17 +227,20 @@ function addGame(auth, game) {
 }
 
 // wrapper for api calls and authorization
-function sheetCaller(commandFunc, params = null) {
+async function sheetCaller(commandFunc, params = null) {
   console.log("Running sheetCaller")
   const output = fs.readFile('credentials.json', (err, content) => {
     if (err) return console.log('Error loading client secret file:', err);
     // Authorize a client with credentials, then call the Google Sheets API.
-    params ? authorize(JSON.parse(content), commandFunc, params) : authorize(JSON.parse(content), commandFunc);
+    return params ? authorize(JSON.parse(content), commandFunc, params) : authorize(JSON.parse(content), commandFunc);
   });
-  console.log(output);
+  console.log(await output);
   console.log("end of sheetCaller")
-  return output
+  return await output
 }
+
+
+
 
 // const exampleGame = newGame('2019-02-14', 'Jodi', 'Grant', 21, 12, 'yes', 'Jodi');
 // sheetCaller(addGame, exampleGame);
