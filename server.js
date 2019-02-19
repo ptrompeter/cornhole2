@@ -1,49 +1,34 @@
-require('dotenv').config();
+//import environment variables
+const envs = require('dotenv').config();
 
-const express = require('express')
-const app = express()
-const port = process.env.SERVER_PORT
+//express configuration
+const express = require('express');
+const app = express();
+const port = process.env.SERVER_PORT;
 
-app.use(function(req, res, next) {
+//dependencies
+const fs = require('fs');
+const readline = require('readline');
+const { google } = require('googleapis');
+
+//server routes
+app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+
+app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
 
-
 app.get('/', (req, res) => res.send('You found me!'));
 app.get('/firstcall', (req, res) => res.send('You reached /firstcall.'));
 app.get('/getData', (req, res) => {
   res.json(sheetCaller(sampleDataSend));
-  });
+});
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
-
-
-const fs = require('fs');
-const readline = require('readline');
-const {google} = require('googleapis');
-
-// If modifying these scopes, delete token.json.
+//global variables
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first
-// time.
 const TOKEN_PATH = 'token.json';
-
-// Load client secrets from a local file.
-// fs.readFile('credentials.json', (err, content) => {
-//   if (err) return console.log('Error loading client secret file:', err);
-//   // Authorize a client with credentials, then call the Google Sheets API.
-//   authorize(JSON.parse(content), listMajors);
-// });
-
-//my executables?
-// fs.readFile('credentials.json', (err, content) => {
-//   if (err) return console.log('Error loading client secret file:', err);
-//   // Authorize a client with credentials, then call the Google Sheets API.
-//   authorize(JSON.parse(content), updateCells);
-// });
 const sheetId = '1kkovYQY6Mg6IAna-O3QDOv3JGMlXlygha5Vaha3rKv0';
 
 
@@ -55,11 +40,9 @@ const sheetId = '1kkovYQY6Mg6IAna-O3QDOv3JGMlXlygha5Vaha3rKv0';
  * @param {function} callback The callback to call with the authorized client.
  */
 function authorize(credentials, callback, params = null) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(
-      client_id, client_secret, redirect_uris[0]);
+  const { client_secret, client_id, redirect_uris } = credentials.installed;
+  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
-  // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
     if (err) return getNewToken(oAuth2Client, callback);
     oAuth2Client.setCredentials(JSON.parse(token));
@@ -67,18 +50,6 @@ function authorize(credentials, callback, params = null) {
   });
 }
 
-
-function authorizeSync(credentials, callback, params = null) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(
-      client_id, client_secret, redirect_uris[0]);
-  try {
-    const token = await JSON.stringify(fs.readFileSync(TOKEN_PATH));
-    oAuth2Client.setCredentials(token);
-    return params ? callback(oAuth2Client, params) : callback(oAuth2Client);
-  } catch (err) {
-    getNewToken(oAuth2Client, callback)
-  }
 /**
  * Get and store new token after prompting for user authorization, and then
  * execute the given callback with the authorized OAuth2 client.
@@ -110,33 +81,7 @@ function getNewToken(oAuth2Client, callback) {
   });
 }
 
-/**
- * Prints the names and majors of students in a sample spreadsheet:
- * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
- * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
- */
-function listMajors(auth) {
-  const sheets = google.sheets({version: 'v4', auth});
-  sheets.spreadsheets.values.get({
-    spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-    range: 'Class Data!A2:E',
-  }, (err, res) => {
-    if (err) return console.log('The API returned an error: ' + err);
-    const rows = res.data.values;
-    if (rows.length) {
-      console.log('Name, Major:');
-      // Print columns A and E, which correspond to indices 0 and 4.
-      rows.map((row) => {
-        console.log(`${row[0]}, ${row[4]}`);
-      });
-    } else {
-      console.log('No data found.');
-    }
-  });
-}
-
 //Get a sample of data from my sheet:
-
 function sampleData(auth) {
   const sheets = google.sheets({version: 'v4', auth});
   sheets.spreadsheets.values.get({
@@ -147,7 +92,7 @@ function sampleData(auth) {
       console.log(typeof err);
       console.log(Object.keys(err));
       console.log(err.response);
-      return console.log('The API returned an error: ' + err);
+      return console.log('The API returned an error: ', err);
     }
     const rows = res.data.values;
     if (rows.length) {
@@ -164,19 +109,19 @@ function sampleData(auth) {
 
 function sampleDataSend(auth) {
   const sheets = google.sheets({version: 'v4', auth});
-  sheets.spreadsheets.values.get({
-    spreadsheetId: '1kkovYQY6Mg6IAna-O3QDOv3JGMlXlygha5Vaha3rKv0',
+  const test = sheets.spreadsheets.values.get(v{
+    spreadsheetId: sheetId,
     range: 'A3:G',
   }, (err, res) => {
     if (err) {
       console.log(typeof err);
       console.log(Object.keys(err));
       console.log(err.response);
-      return console.log('The API returned an error: ' + err);
+      return console.log('The API returned an error: ', err);
     }
     const rows = res.data.values;
     if (rows.length) {
-      let jsonRows = JSON.stringify(rows);
+      const jsonRows = JSON.stringify(rows);
       console.log("Data:", jsonRows);
       return jsonRows;
     } else {
@@ -184,6 +129,7 @@ function sampleDataSend(auth) {
       return "No data found.";
     }
   });
+  console.log('TEST', test);
 }
 
 //Change the value of F5 to yes and G5 to Robin
@@ -195,22 +141,21 @@ function updateCells(auth) {
     valueInputOption: 'RAW',
     resource: {
           "values": [
-          ["yes", "Robin"]
+            ["yes", "Robin"]
           ]
     }
-
   }, (err, res) => {
     if (err) {
       console.log(typeof err);
       console.log(Object.keys(err));
       console.log(err.response);
-      return console.log('The API returned an error: ' + err);
+      console.log('The API returned an error: ', err);
     }
   });
 }
 
-const newGame = (date, p1, p2, s1, s2, finished, winner) => [date, p1, p2, s1, s2, finished, winner];
-
+//A game is a array with the following variables: 
+//date, player1 name, player2 name, score 1, score 2, finished?, winner.
 
 function addGame(auth, game) {
   const sheets = google.sheets({version: 'v4', auth});
@@ -228,22 +173,13 @@ function addGame(auth, game) {
 
 // wrapper for api calls and authorization
 async function sheetCaller(commandFunc, params = null) {
-  console.log("Running sheetCaller")
-  const output = fs.readFile('credentials.json', (err, content) => {
-    if (err) return console.log('Error loading client secret file:', err);
-    // Authorize a client with credentials, then call the Google Sheets API.
-    return params ? authorize(JSON.parse(content), commandFunc, params) : authorize(JSON.parse(content), commandFunc);
-  });
-  console.log(await output);
-  console.log("end of sheetCaller")
-  return await output
+  console.log("Running sheetCaller");
+  try {
+    const creds = await fs.readFileSync('credentials.json');
+    const response = params ? authorize(JSON.parse(creds), commandFunc, params) : authorize(JSON.parse(creds), commandFunc);
+    console.log('RESPONSE IS: ', response);
+    return response;
+  } catch (err) {
+    console.log('Error loading client secret file:', err);
+  }
 }
-
-
-
-
-// const exampleGame = newGame('2019-02-14', 'Jodi', 'Grant', 21, 12, 'yes', 'Jodi');
-// sheetCaller(addGame, exampleGame);
-
-
-// sheetCaller(sampleDataSend);
