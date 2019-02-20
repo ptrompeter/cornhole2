@@ -9,7 +9,11 @@ const port = process.env.SERVER_PORT;
 //dependencies
 const fs = require('fs');
 const readline = require('readline');
-const { google } = require('googleapis');
+// const { google } = require('googleapis');
+const bluebird = require('bluebird');
+const { google } = bluebird.promisifyAll(require('googleapis'), { suffix: 'BBAsync' });
+const { R } = require('ramda');
+
 
 //server routes
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
@@ -31,53 +35,49 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = 'token.json';
 const sheetId = '1kkovYQY6Mg6IAna-O3QDOv3JGMlXlygha5Vaha3rKv0';
 
-
-
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback, params = null) {
-  const { client_secret, client_id, redirect_uris } = credentials.installed;
+async function getAuthorizationToken() {
+  const credentials = fs.readFileSync('credentials.json');
+  const { client_secret, client_id, redirect_uris } = JSON.parse(credentials).installed;
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getNewToken(oAuth2Client, callback);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    return params ? callback(oAuth2Client, params) : callback(oAuth2Client);
-  });
+  try {
+    const tokenBuffer = fs.readFileSync(TOKEN_PATH);
+    return JSON.stringify(tokenBuffer);
+  } catch (err) {
+    const newToken = await getNewToken(oAuth2Client);
+    return newToken;
+  }
 }
 
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getNewToken(oAuth2Client, callback) {
-  const authUrl = oAuth2Client.generateAuthUrl({
+async function getNewToken(oAuth2Client) {
+  const authParams = {
     access_type: 'offline',
     scope: SCOPES,
-  });
+  };
+  const authUrl = oAuth2Client.generateAuthUrl(authParams);
+  
+  //Prompt to direct user to authorize this app
   console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
+
+  const readlineParams = {
     input: process.stdin,
     output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
+  };
+  const rl = readline.createInterface(readlineParams);
+
+  rl.question('Enter code: ', async (code) => {
     rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error while trying to retrieve access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
-    });
+    try {
+      const getToken = bluebird.promisify(oAuth2Client.getToken, { context: oAuth2Client });
+      const tokenBuffer = await getToken(code);
+      console.log('tokenbuffer', tokenBuffer);
+      oAuth2Client.setCredentials(tokenBuffer);
+      const token = JSON.stringify(tokenBuffer);
+      fs.writeFileSync(TOKEN_PATH, token);
+      return token;
+    } catch(err) {
+      console.log(err);
+    }
   });
 }
 
@@ -133,6 +133,7 @@ function sampleDataSend(auth) {
 }
 
 //Change the value of F5 to yes and G5 to Robin
+
 function updateCells(auth) {
   const sheets = google.sheets({version: 'v4', auth});
   sheets.spreadsheets.values.update({
